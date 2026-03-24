@@ -1,0 +1,215 @@
+{
+    "account_id": "123456789012",
+    "region": "us-east-1",
+    "users": [
+        {
+            "UserName": "admin-user",
+            "Arn": "arn:aws:iam::123456789012:user/admin-user",
+            "AttachedPolicies": [{"PolicyName": "AdministratorAccess", "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"}],
+            "InlinePolicies": [],
+            "Groups": ["administrators"]
+        },
+        {
+            "UserName": "developer-alice",
+            "Arn": "arn:aws:iam::123456789012:user/developer-alice",
+            "AttachedPolicies": [],
+            "InlinePolicies": [
+                {
+                    "PolicyName": "dev-inline-policy",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": ["ec2:Describe*", "s3:Get*", "s3:List*", "sts:AssumeRole", "iam:PassRole"],
+                                "Resource": "*"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "Groups": ["developers"]
+        },
+        {
+            "UserName": "developer-bob",
+            "Arn": "arn:aws:iam::123456789012:user/developer-bob",
+            "AttachedPolicies": [{"PolicyName": "PowerUserAccess", "PolicyArn": "arn:aws:iam::aws:policy/PowerUserAccess"}],
+            "InlinePolicies": [
+                {
+                    "PolicyName": "bob-extra-perms",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": ["lambda:CreateFunction", "lambda:InvokeFunction", "iam:PassRole"],
+                                "Resource": "*"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "Groups": ["developers"]
+        },
+        {
+            "UserName": "ci-service-user",
+            "Arn": "arn:aws:iam::123456789012:user/ci-service-user",
+            "AttachedPolicies": [],
+            "InlinePolicies": [
+                {
+                    "PolicyName": "ci-permissions",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "ecr:*", "ecs:*", "ec2:RunInstances", "ec2:TerminateInstances",
+                                    "iam:PassRole", "iam:CreatePolicyVersion", "sts:AssumeRole"
+                                ],
+                                "Resource": "*"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "Groups": []
+        },
+        {
+            "UserName": "readonly-auditor",
+            "Arn": "arn:aws:iam::123456789012:user/readonly-auditor",
+            "AttachedPolicies": [{"PolicyName": "ReadOnlyAccess", "PolicyArn": "arn:aws:iam::aws:policy/ReadOnlyAccess"}],
+            "InlinePolicies": [],
+            "Groups": ["auditors"]
+        }
+    ],
+    "groups": [
+        {
+            "GroupName": "administrators",
+            "Arn": "arn:aws:iam::123456789012:group/administrators",
+            "AttachedPolicies": [{"PolicyName": "AdministratorAccess", "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"}]
+        },
+        {
+            "GroupName": "developers",
+            "Arn": "arn:aws:iam::123456789012:group/developers",
+            "AttachedPolicies": [{"PolicyName": "PowerUserAccess", "PolicyArn": "arn:aws:iam::aws:policy/PowerUserAccess"}]
+        },
+        {
+            "GroupName": "auditors",
+            "Arn": "arn:aws:iam::123456789012:group/auditors",
+            "AttachedPolicies": [{"PolicyName": "ReadOnlyAccess", "PolicyArn": "arn:aws:iam::aws:policy/ReadOnlyAccess"}]
+        }
+    ],
+    "roles": [
+        {
+            "RoleName": "eks-node-role",
+            "Arn": "arn:aws:iam::123456789012:role/eks-node-role",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}
+                ]
+            },
+            "AttachedPolicies": [
+                {"PolicyName": "AmazonEKSWorkerNodePolicy"},
+                {"PolicyName": "AmazonEC2ContainerRegistryReadOnly"}
+            ],
+            "InlinePolicies": [
+                {
+                    "PolicyName": "node-extra",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {"Effect": "Allow", "Action": ["s3:*", "ssm:SendCommand"], "Resource": "*"}
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "RoleName": "lambda-admin-role",
+            "Arn": "arn:aws:iam::123456789012:role/lambda-admin-role",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"},
+                    {"Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::123456789012:user/developer-bob"}, "Action": "sts:AssumeRole"}
+                ]
+            },
+            "AttachedPolicies": [{"PolicyName": "AdministratorAccess"}],
+            "InlinePolicies": []
+        },
+        {
+            "RoleName": "cross-account-role",
+            "Arn": "arn:aws:iam::123456789012:role/cross-account-role",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::987654321098:root"}, "Action": "sts:AssumeRole"}
+                ]
+            },
+            "AttachedPolicies": [{"PolicyName": "AdministratorAccess"}],
+            "InlinePolicies": []
+        },
+        {
+            "RoleName": "ec2-ssm-role",
+            "Arn": "arn:aws:iam::123456789012:role/ec2-ssm-role",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}
+                ]
+            },
+            "AttachedPolicies": [{"PolicyName": "AmazonSSMManagedInstanceCore"}],
+            "InlinePolicies": []
+        },
+        {
+            "RoleName": "overly-permissive-role",
+            "Arn": "arn:aws:iam::123456789012:role/overly-permissive-role",
+            "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {"Effect": "Allow", "Principal": {"AWS": "*"}, "Action": "sts:AssumeRole"}
+                ]
+            },
+            "AttachedPolicies": [{"PolicyName": "AdministratorAccess"}],
+            "InlinePolicies": []
+        }
+    ],
+    "policies": [
+        {
+            "PolicyName": "custom-deploy-policy",
+            "Arn": "arn:aws:iam::123456789012:policy/custom-deploy-policy",
+            "DefaultVersionId": "v1",
+            "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "ecs:UpdateService", "ecs:RegisterTaskDefinition",
+                            "ecr:GetAuthorizationToken", "ecr:BatchGetImage",
+                            "iam:PassRole", "sts:AssumeRole"
+                        ],
+                        "Resource": "*"
+                    }
+                ]
+            }
+        },
+        {
+            "PolicyName": "overly-broad-policy",
+            "Arn": "arn:aws:iam::123456789012:policy/overly-broad-policy",
+            "DefaultVersionId": "v1",
+            "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Action": "*",
+                        "Resource": "*"
+                    }
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="KubePath — Autonomous Cloud/K8s Lateral Movement Mapper. Map attack paths from compromised pods to cluster admin.">
+    <title>KubePath — Lateral Movement Mapper</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Cytoscape.js -->
+    <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+    <!-- Cytoscape COSE-Bilkent layout for better force-directed layouts -->
+    <script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
+    <script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
+    <script src="https://unpkg.com/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.js"></script>
+
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Top Bar -->
+    <header id="topbar">
+        <div class="topbar-left">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 2L28 9V23L16 30L4 23V9L16 2Z" stroke="url(#logoGrad)" stroke-width="2" fill="none"/>
+                    <path d="M16 8L22 11.5V18.5L16 22L10 18.5V11.5L16 8Z" fill="url(#logoGrad)" opacity="0.3"/>
+                    <circle cx="16" cy="15" r="3" fill="url(#logoGrad)"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="4" y1="2" x2="28" y2="30">
+                            <stop offset="0%" stop-color="#00f5d4"/>
+                            <stop offset="100%" stop-color="#7b61ff"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>KubePath</h1>
+            </div>
+            <span class="version-badge">v1.0.0</span>
+        </div>
+        <div class="topbar-center">
+            <div class="status-indicators">
+                <div class="status-item" id="neo4j-status">
+                    <span class="status-dot"></span>
+                    <span>Neo4j</span>
+                </div>
+                <div class="status-item" id="node-count-display">
+                    <span class="status-value">0</span>
+                    <span>Nodes</span>
+                </div>
+                <div class="status-item" id="edge-count-display">
+                    <span class="status-value">0</span>
+                    <span>Edges</span>
+                </div>
+                <div class="status-item" id="paths-count-display">
+                    <span class="status-value">—</span>
+                    <span>Attack Paths</span>
+                </div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="risk-score-badge" id="risk-score-badge" title="Overall Risk Score">
+                <div class="score-ring">
+                    <svg viewBox="0 0 44 44">
+                        <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+                        <circle id="score-ring-fill" cx="22" cy="22" r="18" fill="none" stroke="#00f5d4" stroke-width="3"
+                                stroke-dasharray="113" stroke-dashoffset="113" stroke-linecap="round"
+                                transform="rotate(-90 22 22)"/>
+                    </svg>
+                    <span class="score-text" id="score-text">—</span>
+                </div>
+                <div class="score-label">
+                    <span class="score-grade" id="score-grade">—</span>
+                    <span>Risk Score</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-container">
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <!-- Ingestion Panel -->
+            <section class="panel" id="panel-ingest">
+                <div class="panel-header" data-toggle="ingest-content">
+                    <h2>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 0 1 .5.5v6.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 8.293V1.5A.5.5 0 0 1 8 1zM2 13.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/></svg>
+                        Data Ingestion
+                    </h2>
+                    <span class="panel-toggle">▼</span>
+                </div>
+                <div class="panel-content" id="ingest-content">
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="btn-ingest-k8s" title="Ingest from live K8s cluster">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0L14.928 4v8L8 16L1.072 12V4L8 0z" opacity="0.5"/></svg>
+                            Ingest K8s Cluster
+                        </button>
+                        <button class="btn btn-primary" id="btn-ingest-aws" title="Ingest from live AWS account">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1z" opacity="0.5"/></svg>
+                            Ingest AWS IAM
+                        </button>
+                    </div>
+                    <div class="divider"><span>or upload config</span></div>
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" id="file-input" accept=".json" hidden>
+                        <select id="upload-type" class="select-input">
+                            <option value="kubernetes">Kubernetes Config</option>
+                            <option value="aws">AWS IAM Config</option>
+                        </select>
+                        <button class="btn btn-outline" id="btn-upload">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12a.5.5 0 0 0 .5-.5V3.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 3.707V11.5a.5.5 0 0 0 .5.5z"/><path d="M2 13.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/></svg>
+                            Upload JSON File
+                        </button>
+                    </div>
+                    <button class="btn btn-danger btn-sm" id="btn-clear" title="Clear entire graph">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1z"/></svg>
+                        Clear Graph
+                    </button>
+                </div>
+            </section>
+
+            <!-- Filters Panel -->
+            <section class="panel" id="panel-filters">
+                <div class="panel-header" data-toggle="filters-content">
+                    <h2>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1.5A.5.5 0 012 1h12a.5.5 0 01.5.5v2a.5.5 0 01-.128.334L10 8.692V13.5a.5.5 0 01-.342.474l-3 1A.5.5 0 016 14.5V8.692L1.628 3.834A.5.5 0 011.5 3.5v-2z"/></svg>
+                        Filters
+                    </h2>
+                    <span class="panel-toggle">▼</span>
+                </div>
+                <div class="panel-content" id="filters-content">
+                    <div class="filter-group">
+                        <label>Search Nodes</label>
+                        <input type="text" id="search-input" class="search-input" placeholder="Search by name...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Node Types</label>
+                        <div class="checkbox-grid" id="node-type-filters"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Risk Level</label>
+                        <div class="checkbox-grid" id="risk-level-filters"></div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Namespace</label>
+                        <select id="namespace-filter" class="select-input">
+                            <option value="">All Namespaces</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-outline btn-sm" id="btn-reset-filters">Reset Filters</button>
+                        <button class="btn btn-outline btn-sm" id="btn-show-attack-edges">Attack Edges Only</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analysis Panel -->
+            <section class="panel" id="panel-analysis">
+                <div class="panel-header" data-toggle="analysis-content">
+                    <h2>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.089z"/></svg>
+                        Attack Analysis
+                    </h2>
+                    <span class="panel-toggle">▼</span>
+                </div>
+                <div class="panel-content" id="analysis-content">
+                    <button class="btn btn-accent" id="btn-find-paths">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.089z"/></svg>
+                        Find Attack Paths
+                    </button>
+                    <button class="btn btn-outline" id="btn-critical-nodes">Find Chokepoints</button>
+                    <button class="btn btn-outline" id="btn-entry-points">Entry Points</button>
+                    <button class="btn btn-outline" id="btn-findings">Security Findings</button>
+
+                    <div id="attack-paths-list" class="results-list"></div>
+                </div>
+            </section>
+
+            <!-- Layout Panel -->
+            <section class="panel" id="panel-layout">
+                <div class="panel-header" data-toggle="layout-content">
+                    <h2>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 4a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" opacity="0.5"/></svg>
+                        Layout & View
+                    </h2>
+                    <span class="panel-toggle">▼</span>
+                </div>
+                <div class="panel-content" id="layout-content">
+                    <div class="button-group">
+                        <button class="btn btn-outline btn-sm" id="btn-layout-cose">Force Layout</button>
+                        <button class="btn btn-outline btn-sm" id="btn-layout-circle">Circle</button>
+                        <button class="btn btn-outline btn-sm" id="btn-layout-grid">Grid</button>
+                        <button class="btn btn-outline btn-sm" id="btn-layout-breadthfirst">Hierarchical</button>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-outline btn-sm" id="btn-fit">Fit to View</button>
+                        <button class="btn btn-outline btn-sm" id="btn-export-png">Export PNG</button>
+                        <button class="btn btn-outline btn-sm" id="btn-export-json">Export JSON</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>Edge Labels</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-edge-labels" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Graph Area -->
+        <div id="graph-container">
+            <div id="cy"></div>
+
+            <!-- Loading Overlay -->
+            <div id="loading-overlay" class="hidden">
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <span id="loading-message">Loading graph...</span>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state">
+                <div class="empty-state-content">
+                    <svg class="empty-icon" viewBox="0 0 64 64" fill="none">
+                        <path d="M32 8L56 20V44L32 56L8 44V20L32 8Z" stroke="url(#emptyGrad)" stroke-width="2" fill="none" opacity="0.5"/>
+                        <path d="M32 16L48 24V40L32 48L16 40V24L32 16Z" stroke="url(#emptyGrad)" stroke-width="1.5" fill="none" opacity="0.3"/>
+                        <circle cx="32" cy="32" r="6" fill="url(#emptyGrad)" opacity="0.2"/>
+                        <defs>
+                            <linearGradient id="emptyGrad" x1="8" y1="8" x2="56" y2="56">
+                                <stop offset="0%" stop-color="#00f5d4"/>
+                                <stop offset="100%" stop-color="#7b61ff"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <h2>No Data Loaded</h2>
+                    <p>Ingest a Kubernetes cluster or AWS account, or upload a JSON configuration file to begin mapping lateral movement paths.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Panel (right slide-out) -->
+        <aside id="detail-panel" class="hidden">
+            <div class="detail-header">
+                <h2 id="detail-title">Node Details</h2>
+                <button class="btn-close" id="btn-close-detail">&times;</button>
+            </div>
+            <div id="detail-content"></div>
+        </aside>
+    </main>
+
+    <!-- Findings Modal -->
+    <div id="findings-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Security Findings</h2>
+                <button class="btn-close" id="btn-close-findings">&times;</button>
+            </div>
+            <div id="findings-list" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script src="/js/graph.js"></script>
+    <script src="/js/controls.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

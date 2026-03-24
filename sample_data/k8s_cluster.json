@@ -1,0 +1,240 @@
+{
+    "cluster_name": "production-cluster",
+    "namespaces": [
+        {"metadata": {"name": "default", "uid": "ns-default-001"}},
+        {"metadata": {"name": "kube-system", "uid": "ns-kubesystem-001"}},
+        {"metadata": {"name": "production", "uid": "ns-production-001"}},
+        {"metadata": {"name": "staging", "uid": "ns-staging-001"}},
+        {"metadata": {"name": "monitoring", "uid": "ns-monitoring-001"}},
+        {"metadata": {"name": "dev", "uid": "ns-dev-001"}}
+    ],
+    "service_accounts": [
+        {"metadata": {"name": "default", "namespace": "default", "uid": "sa-default-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "default", "namespace": "production", "uid": "sa-prod-default-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "web-app-sa", "namespace": "production", "uid": "sa-webapp-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "backend-sa", "namespace": "production", "uid": "sa-backend-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "deployer-sa", "namespace": "production", "uid": "sa-deployer-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "monitoring-sa", "namespace": "monitoring", "uid": "sa-monitoring-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "ci-cd-sa", "namespace": "staging", "uid": "sa-cicd-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "debug-sa", "namespace": "dev", "uid": "sa-debug-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "default", "namespace": "kube-system", "uid": "sa-ks-default-001"}, "automount_service_account_token": true},
+        {"metadata": {"name": "tiller", "namespace": "kube-system", "uid": "sa-tiller-001"}, "automount_service_account_token": true}
+    ],
+    "pods": [
+        {
+            "metadata": {"name": "web-frontend-7d4f8b9c-x2k1", "namespace": "production", "uid": "pod-webfe-001"},
+            "spec": {
+                "service_account_name": "web-app-sa",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "nginx", "image": "nginx:latest", "security_context": {}}
+                ],
+                "host_network": false, "host_pid": false, "host_ipc": false
+            }
+        },
+        {
+            "metadata": {"name": "api-server-5f6d7e8a-m3n2", "namespace": "production", "uid": "pod-api-001"},
+            "spec": {
+                "service_account_name": "backend-sa",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "api", "image": "company/api:v2.1", "security_context": {}}
+                ],
+                "host_network": false, "host_pid": false, "host_ipc": false
+            }
+        },
+        {
+            "metadata": {"name": "deployer-pod-8c9d0e1f-j4k5", "namespace": "production", "uid": "pod-deployer-001"},
+            "spec": {
+                "service_account_name": "deployer-sa",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "kubectl", "image": "bitnami/kubectl:latest", "security_context": {"privileged": true}}
+                ],
+                "host_network": true, "host_pid": false, "host_ipc": false
+            }
+        },
+        {
+            "metadata": {"name": "prometheus-6a7b8c9d-p1q2", "namespace": "monitoring", "uid": "pod-prom-001"},
+            "spec": {
+                "service_account_name": "monitoring-sa",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "prometheus", "image": "prom/prometheus:latest", "security_context": {}}
+                ],
+                "host_network": true, "host_pid": false, "host_ipc": false
+            }
+        },
+        {
+            "metadata": {"name": "ci-runner-3e4f5a6b-r7s8", "namespace": "staging", "uid": "pod-ci-001"},
+            "spec": {
+                "service_account_name": "ci-cd-sa",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "runner", "image": "gitlab/gitlab-runner:latest", "security_context": {"privileged": true}}
+                ],
+                "host_network": false, "host_pid": true, "host_ipc": false,
+                "volumes": [{"name": "docker-sock", "host_path": {"path": "/var/run/docker.sock"}}]
+            }
+        },
+        {
+            "metadata": {"name": "debug-pod-1a2b3c4d-t9u0", "namespace": "dev", "uid": "pod-debug-001"},
+            "spec": {
+                "service_account_name": "debug-sa",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "debug", "image": "ubuntu:latest", "security_context": {"privileged": true},
+                     "volume_mounts": [{"name": "hostfs", "mount_path": "/host"}]}
+                ],
+                "host_network": true, "host_pid": true, "host_ipc": true,
+                "volumes": [{"name": "hostfs", "host_path": {"path": "/"}}]
+            }
+        },
+        {
+            "metadata": {"name": "tiller-deploy-5d6e7f8a-v1w2", "namespace": "kube-system", "uid": "pod-tiller-001"},
+            "spec": {
+                "service_account_name": "tiller",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "tiller", "image": "ghcr.io/helm/tiller:v2.17.0", "security_context": {}}
+                ],
+                "host_network": false, "host_pid": false, "host_ipc": false
+            }
+        },
+        {
+            "metadata": {"name": "redis-cache-2b3c4d5e-x3y4", "namespace": "production", "uid": "pod-redis-001"},
+            "spec": {
+                "service_account_name": "default",
+                "automount_service_account_token": true,
+                "containers": [
+                    {"name": "redis", "image": "redis:7-alpine", "security_context": {}}
+                ],
+                "host_network": false, "host_pid": false, "host_ipc": false
+            }
+        }
+    ],
+    "roles": [
+        {
+            "metadata": {"name": "pod-reader", "namespace": "production", "uid": "role-podreader-001"},
+            "rules": [
+                {"resources": ["pods"], "verbs": ["get", "list", "watch"], "api_groups": [""]}
+            ]
+        },
+        {
+            "metadata": {"name": "secret-reader", "namespace": "production", "uid": "role-secretreader-001"},
+            "rules": [
+                {"resources": ["secrets"], "verbs": ["get", "list"], "api_groups": [""]}
+            ]
+        },
+        {
+            "metadata": {"name": "deployer-role", "namespace": "production", "uid": "role-deployer-001"},
+            "rules": [
+                {"resources": ["pods", "deployments", "services"], "verbs": ["get", "list", "create", "update", "patch", "delete"], "api_groups": ["", "apps"]},
+                {"resources": ["pods/exec"], "verbs": ["create", "get"], "api_groups": [""]},
+                {"resources": ["secrets"], "verbs": ["get", "list"], "api_groups": [""]}
+            ]
+        }
+    ],
+    "cluster_roles": [
+        {
+            "metadata": {"name": "cluster-admin", "uid": "cr-admin-001"},
+            "rules": [
+                {"resources": ["*"], "verbs": ["*"], "api_groups": ["*"]}
+            ]
+        },
+        {
+            "metadata": {"name": "cluster-monitoring", "uid": "cr-monitoring-001"},
+            "rules": [
+                {"resources": ["pods", "nodes", "services", "endpoints", "namespaces"], "verbs": ["get", "list", "watch"], "api_groups": [""]},
+                {"resources": ["secrets"], "verbs": ["get", "list"], "api_groups": [""]}
+            ]
+        },
+        {
+            "metadata": {"name": "ci-cd-admin", "uid": "cr-cicd-001"},
+            "rules": [
+                {"resources": ["pods", "deployments", "services", "configmaps", "secrets"], "verbs": ["get", "list", "create", "update", "patch", "delete"], "api_groups": ["", "apps"]},
+                {"resources": ["pods/exec"], "verbs": ["create"], "api_groups": [""]},
+                {"resources": ["rolebindings", "clusterrolebindings"], "verbs": ["create"], "api_groups": ["rbac.authorization.k8s.io"]},
+                {"resources": ["serviceaccounts"], "verbs": ["impersonate"], "api_groups": [""]}
+            ]
+        }
+    ],
+    "role_bindings": [
+        {
+            "metadata": {"name": "web-app-pod-reader", "namespace": "production", "uid": "rb-webapp-001"},
+            "role_ref": {"kind": "Role", "name": "pod-reader"},
+            "subjects": [{"kind": "ServiceAccount", "name": "web-app-sa", "namespace": "production"}]
+        },
+        {
+            "metadata": {"name": "backend-secret-reader", "namespace": "production", "uid": "rb-backend-001"},
+            "role_ref": {"kind": "Role", "name": "secret-reader"},
+            "subjects": [{"kind": "ServiceAccount", "name": "backend-sa", "namespace": "production"}]
+        },
+        {
+            "metadata": {"name": "deployer-binding", "namespace": "production", "uid": "rb-deployer-001"},
+            "role_ref": {"kind": "Role", "name": "deployer-role"},
+            "subjects": [{"kind": "ServiceAccount", "name": "deployer-sa", "namespace": "production"}]
+        }
+    ],
+    "cluster_role_bindings": [
+        {
+            "metadata": {"name": "tiller-cluster-admin", "uid": "crb-tiller-001"},
+            "role_ref": {"kind": "ClusterRole", "name": "cluster-admin"},
+            "subjects": [{"kind": "ServiceAccount", "name": "tiller", "namespace": "kube-system"}]
+        },
+        {
+            "metadata": {"name": "monitoring-cluster-view", "uid": "crb-monitoring-001"},
+            "role_ref": {"kind": "ClusterRole", "name": "cluster-monitoring"},
+            "subjects": [{"kind": "ServiceAccount", "name": "monitoring-sa", "namespace": "monitoring"}]
+        },
+        {
+            "metadata": {"name": "ci-cd-cluster-admin", "uid": "crb-cicd-001"},
+            "role_ref": {"kind": "ClusterRole", "name": "ci-cd-admin"},
+            "subjects": [{"kind": "ServiceAccount", "name": "ci-cd-sa", "namespace": "staging"}]
+        },
+        {
+            "metadata": {"name": "debug-cluster-admin", "uid": "crb-debug-001"},
+            "role_ref": {"kind": "ClusterRole", "name": "cluster-admin"},
+            "subjects": [{"kind": "ServiceAccount", "name": "debug-sa", "namespace": "dev"}]
+        }
+    ],
+    "nodes": [
+        {"metadata": {"name": "master-01", "uid": "node-master-001", "labels": {"node-role.kubernetes.io/control-plane": ""}}},
+        {"metadata": {"name": "worker-01", "uid": "node-worker-001", "labels": {"node-role.kubernetes.io/worker": ""}}},
+        {"metadata": {"name": "worker-02", "uid": "node-worker-002", "labels": {"node-role.kubernetes.io/worker": ""}}}
+    ],
+    "secrets": [
+        {"metadata": {"name": "web-app-sa-token-xk2m", "namespace": "production", "uid": "secret-webapp-001"}, "type": "kubernetes.io/service-account-token"},
+        {"metadata": {"name": "backend-sa-token-j9l3", "namespace": "production", "uid": "secret-backend-001"}, "type": "kubernetes.io/service-account-token"},
+        {"metadata": {"name": "deployer-sa-token-m4n5", "namespace": "production", "uid": "secret-deployer-001"}, "type": "kubernetes.io/service-account-token"},
+        {"metadata": {"name": "db-credentials", "namespace": "production", "uid": "secret-db-001"}, "type": "Opaque"},
+        {"metadata": {"name": "tls-wildcard", "namespace": "production", "uid": "secret-tls-001"}, "type": "kubernetes.io/tls"},
+        {"metadata": {"name": "tiller-sa-token-p6q7", "namespace": "kube-system", "uid": "secret-tiller-001"}, "type": "kubernetes.io/service-account-token"},
+        {"metadata": {"name": "ci-cd-sa-token-r8s9", "namespace": "staging", "uid": "secret-cicd-001"}, "type": "kubernetes.io/service-account-token"},
+        {"metadata": {"name": "api-key-external", "namespace": "production", "uid": "secret-apikey-001"}, "type": "Opaque"}
+    ],
+    "services": [
+        {
+            "metadata": {"name": "web-frontend-svc", "namespace": "production", "uid": "svc-webfe-001"},
+            "spec": {"type": "LoadBalancer", "selector": {"app": "web-frontend"}}
+        },
+        {
+            "metadata": {"name": "api-server-svc", "namespace": "production", "uid": "svc-api-001"},
+            "spec": {"type": "ClusterIP", "selector": {"app": "api-server"}}
+        },
+        {
+            "metadata": {"name": "redis-svc", "namespace": "production", "uid": "svc-redis-001"},
+            "spec": {"type": "ClusterIP", "selector": {"app": "redis"}}
+        },
+        {
+            "metadata": {"name": "prometheus-svc", "namespace": "monitoring", "uid": "svc-prom-001"},
+            "spec": {"type": "NodePort", "selector": {"app": "prometheus"}}
+        }
+    ],
+    "network_policies": [
+        {
+            "metadata": {"name": "deny-default", "namespace": "production", "uid": "np-deny-001"},
+            "spec": {"policy_types": ["Ingress", "Egress"], "pod_selector": {}}
+        }
+    ]
+}
