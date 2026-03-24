@@ -87,7 +87,7 @@ graph TB
 ### Option 1: Docker Compose (Recommended)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/KubePath.git
+git clone https://github.com/zshguy/KubePath.git
 cd KubePath
 docker-compose up --build
 ```
@@ -98,7 +98,7 @@ Open http://localhost:8000 in your browser.
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_USERNAME/KubePath.git
+git clone https://github.com/zshguy/KubePath.git
 cd KubePath
 
 # 2. Create virtual environment
