@@ -211,9 +211,12 @@ html, body {
 /* ── Sidebar ─────────────────────────────────────────────────────── */
 #sidebar {
     width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
+    min-width: 250px;
+    max-width: 50vw;
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
+    resize: horizontal;
     background: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
     padding: 12px;
@@ -229,6 +232,7 @@ html, body {
     border-radius: var(--radius-md);
     overflow: hidden;
     backdrop-filter: blur(12px);
+    flex-shrink: 0;
 }
 
 .panel-header {
@@ -908,8 +912,20 @@ html, body {
 }
 
 @media (max-width: 900px) {
-    #sidebar { display: none; }
-    :root { --sidebar-width: 0px; }
+    #app-container {
+        flex-direction: column;
+    }
+    #sidebar {
+        width: 100%;
+        max-width: 100%;
+        height: 40vh;
+        min-height: 250px;
+        resize: none;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+    }
+    :root { --sidebar-width: 100%; }
 }
 
 /* ── Utility ─────────────────────────────────────────────────────── */

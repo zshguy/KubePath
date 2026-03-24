@@ -65,6 +65,7 @@ class PathFinder:
           AND start.uid <> target.uid
         WITH nodes(path) AS path_nodes
         UNWIND path_nodes AS n
+        WITH n
         WHERE n.node_type <> 'ClusterAdmin'
         WITH n, count(*) AS path_count
         RETURN n.uid AS uid, n.name AS name, n.node_type AS node_type,
